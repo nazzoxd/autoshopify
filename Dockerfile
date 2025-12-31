@@ -7,12 +7,13 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && docker-php-ext-install curl
 
-# Fix Apache MPM error: Ensure only one MPM is loaded
-# The php:apache images usually come with mpm_prefork enabled for PHP compatibility.
-# We explicitly disable others if they exist and ensure prefork is enabled.
-RUN a2dismod mpm_event || true && \
-    a2dismod mpm_worker || true && \
-    a2enmod mpm_prefork || true
+# Robust fix for Apache MPM error:
+# 1. Remove any existing MPM configurations that might cause conflicts
+# 2. Explicitly enable only mpm_prefork
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_event.conf && \
+    rm -f /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_worker.conf && \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load && \
+    ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf || true
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
